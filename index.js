@@ -17,7 +17,9 @@ const nodes = [
     {name: "pomme"},
     {name: "nourriture"},
     {name: "Paul"},
-    {name: "Pierre"}
+    {name: "Pierre"},
+    {name: "Alice"},
+    {name: "dessiner"}
 ];
 
 const links = [
@@ -26,7 +28,8 @@ const links = [
     {source: "pomme", target: "nourriture", label: "est"},
     {source: "Paul", target: "personne", label: "est"},
     {source: "Paul", target: "pomme", label: "aimePas"},
-    {source: "Pierre", target: "personne", label: "est"}
+    {source: "Pierre", target: "personne", label: "est"},
+    {source: "Alice", target: "dessiner", label: "aime"}
 ];
 
 /*
@@ -76,8 +79,8 @@ function dragstarted(d) {
     if (!d3.event.active) simulation.alphaTarget(0.3).restart();
     d.fx = d.x;
     d.fy = d.y;
-    nodeG.attr("cursor", "grabbing");
-    svg.attr("cursor", "grabbing")
+    //nodeG.attr("cursor", "grabbing");
+    //svg.attr("cursor", "grabbing")
   }
   
   function dragged(d) {
@@ -89,13 +92,17 @@ function dragstarted(d) {
     if (!d3.event.active) simulation.alphaTarget(0);
     d.fx = null;
     d.fy = null;
-    nodeG.attr("cursor", "grab")
-    svg.attr("cursor", "default")
+    //nodeG.attr("cursor", "grab")
+    //svg.attr("cursor", "default")
   }
 
-//====== Graph elements ======    
 
-const linkG = svg.append("g")
+
+//====== Graph elements ======  
+
+const elements = svg.append("g")
+
+const linkG = elements.append("g")
     .selectAll("line")
     .data(links)
     .enter().append("line")
@@ -103,7 +110,7 @@ const linkG = svg.append("g")
         .attr("stroke", "black")
         .attr("marker-end", "url(#head)");
 
-const arrowHeadG = svg.append("svg:defs")
+const arrowHeadG = elements.append("svg:defs")
     .selectAll("marker")
     .data(["head"])
     .enter().append("svg:marker")
@@ -120,17 +127,31 @@ const arrowHeadG = svg.append("svg:defs")
     .append("svg:polyline")
         .attr("points", "3,-5 10,0 3,5")
 
-const nodeG = svg.append("g")
+const nodeG = elements.append("g")
     .selectAll("circle")
     .data(nodes)
     .enter().append("circle")
         .attr("r", 10)
     //Drag behavior
-    .attr("cursor", "grab")
+    //.attr("cursor", "grab")
     .call(d3.drag()
         .on("start", dragstarted)
         .on("drag", dragged)
         .on("end", dragended));
+
+
+
+//====== Zoom ======
+
+svg.call(d3.zoom()
+    .extent([[0, 0], [width, height]])
+    //.scaleExtent([1,8])
+    .on("zoom", zoomed));
+
+
+function zoomed() {
+    elements.attr("transform", d3.event.transform)
+}
 
 
 
