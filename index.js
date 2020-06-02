@@ -1,5 +1,5 @@
 const svg = d3.select("svg")
-    .attr("cursor", "grab")
+    //.attr("cursor", "grab")
 
 const height = svg.attr("height");
 const width = svg.attr("width")
@@ -76,6 +76,8 @@ function dragstarted(d) {
     if (!d3.event.active) simulation.alphaTarget(0.3).restart();
     d.fx = d.x;
     d.fy = d.y;
+    nodeG.attr("cursor", "grabbing");
+    svg.attr("cursor", "grabbing")
   }
   
   function dragged(d) {
@@ -87,22 +89,11 @@ function dragstarted(d) {
     if (!d3.event.active) simulation.alphaTarget(0);
     d.fx = null;
     d.fy = null;
+    nodeG.attr("cursor", "grab")
+    svg.attr("cursor", "default")
   }
 
 //====== Graph elements ======    
-
-const nodeG = svg.append("g")
-    .selectAll("circle")
-    .data(nodes)
-    .enter().append("circle")
-        .attr("r", 10)
-    //Drag behavior
-    .call(d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended));
-
-
 
 const linkG = svg.append("g")
     .selectAll("line")
@@ -128,6 +119,18 @@ const arrowHeadG = svg.append("svg:defs")
         .attr("stroke-width", 1.5)
     .append("svg:polyline")
         .attr("points", "3,-5 10,0 3,5")
+
+const nodeG = svg.append("g")
+    .selectAll("circle")
+    .data(nodes)
+    .enter().append("circle")
+        .attr("r", 10)
+    //Drag behavior
+    .attr("cursor", "grab")
+    .call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended));
 
 
 
