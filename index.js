@@ -1,4 +1,5 @@
 const svg = d3.select("svg")
+    .attr("cursor", "grab")
 
 const height = svg.attr("height");
 const width = svg.attr("width")
@@ -24,7 +25,7 @@ const links = [
     {source: "Jean", target: "pomme", label: "aime"},
     {source: "pomme", target: "nourriture", label: "est"},
     {source: "Paul", target: "personne", label: "est"},
-    //{source: "Paul", target: "pomme", label: "aimePas"},
+    {source: "Paul", target: "pomme", label: "aimePas"},
     {source: "Pierre", target: "personne", label: "est"}
 ];
 
@@ -50,7 +51,7 @@ const simulation = d3.forceSimulation(nodes)
         .strength(1)
         )
     .force("charge", d3.forceManyBody()
-        .strength(-100))
+        .strength(-500))
     .force("center", d3.forceCenter(width/2 , height/2))
     .on("tick", ticked);
 
