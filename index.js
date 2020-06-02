@@ -42,10 +42,15 @@ function getNodes(data){
 
 
 const simulation = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(function(d) {
-        return d.name;
-    }))
-    .force("charge", d3.forceManyBody().strength(-100))
+    .force("link", d3.forceLink(links)
+        .id(function(d) {
+            return d.name;
+        })
+        .distance(200)
+        .strength(1)
+        )
+    .force("charge", d3.forceManyBody()
+        .strength(-100))
     .force("center", d3.forceCenter(width/2 , height/2))
     .on("tick", ticked);
 
@@ -61,9 +66,27 @@ const linkG = svg.append("g")
     .selectAll("line")
     .data(links)
     .enter().append("line")
-        .attr("stroke-width", 3)
-        .attr("stroke", "black");
-        
+        .attr("stroke-width", 2)
+        .attr("stroke", "black")
+        .attr("marker-end", "url(#head)");
+
+const arrowHeadG = svg.append("svg:defs")
+    .selectAll("marker")
+    .data(["head"])
+    .enter().append("svg:marker")
+        .attr("id", String)
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 18)
+        .attr("refY", 0)
+        .attr("markerWidth", 5)
+        .attr("markerHeight", 5)
+        .attr("orient", "auto")
+        .attr("fill", "none")
+        .attr("stroke", "black")
+        .attr("stroke-width", 1.5)
+    .append("svg:polyline")
+        .attr("points", "3,-5 10,0 3,5")
+
 
 function ticked() {
     nodeG
