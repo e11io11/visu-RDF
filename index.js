@@ -1,8 +1,10 @@
-const svg = d3.select("svg")
+var n3 = require('n3');
+
+const svg = d3.select("svg");
     //.attr("cursor", "grab")
 
 const height = svg.attr("height");
-const width = svg.attr("width")
+const width = svg.attr("width");
 
 
 const nodes = [
@@ -109,6 +111,8 @@ function dragstarted(d) {
     <g></g>         //linkG: arrow lines
     <defs></defs>   //arrowHeadG: arrow heads
     <g></g>         //nodeG: nodes
+    <g></g>         //linkTextG: link text
+    <g></g>         //nodeTextG: node text
   </g>
 </svg>
 */

@@ -1,0 +1,22 @@
+{
+  "name": "visu-rdf",
+  "version": "1.0.0",
+  "description": "RDF graph visualisation tool",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/e11io11/visu-RDF.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/e11io11/visu-RDF/issues"
+  },
+  "homepage": "https://github.com/e11io11/visu-RDF#readme",
+  "dependencies": {
+    "n3": "^1.3.7"
+  }
+}
