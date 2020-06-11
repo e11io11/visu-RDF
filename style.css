@@ -1,0 +1,47 @@
+.linkText{
+    font-family: Arial, Helvetica, sans-serif;
+    /*font-weight: bold;*/
+    text-shadow:
+        -1px -1px 0 #fff,
+        0   -1px 0 #fff,
+        1px -1px 0 #fff,
+        1px  0   0 #fff,
+        1px  1px 0 #fff,
+        0    1px 0 #fff,
+        -1px  1px 0 #fff,
+        -1px  0   0 #fff;
+}
+
+.nodeText{
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    font-size: 100px;
+    text-shadow:
+        -1px -1px 0 #fff,
+        0   -1px 0 #fff,
+        1px -1px 0 #fff,
+        1px  0   0 #fff,
+        1px  1px 0 #fff,
+        0    1px 0 #fff,
+        -1px  1px 0 #fff,
+        -1px  0   0 #fff;
+}
+
+.node{
+    fill: orange;
+    stroke: #fff;
+    stroke-width: 3;
+}
+
+
+.line{
+    fill: none;
+    stroke: grey;
+    stroke-width: 5;
+}
+
+.arrowHead{
+    fill: none;
+    stroke: grey;
+    stroke-width: 1.5;
+}
