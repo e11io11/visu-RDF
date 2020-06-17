@@ -17,7 +17,11 @@
   },
   "homepage": "https://github.com/e11io11/visu-RDF#readme",
   "dependencies": {
+    "ejs": "^3.1.3",
+    "express": "^4.17.1",
     "fs": "0.0.1-security",
-    "n3": "^1.3.7"
+    "n3": "^1.3.7",
+    "socket.io": "^2.3.0",
+    "stream-json": "^1.5.0"
   }
 }
