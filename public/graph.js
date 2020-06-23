@@ -21,25 +21,26 @@ const simulation = d3.forceSimulation()
 
 
 function loadFile() {
+    console.log("loading file")
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/graphData');
+    xhr.open('GET', '/sparql');
     xhr.responseType = 'json'
     xhr.addEventListener('readystatechange', function() { 
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) { 
             console.log(xhr.response);
             data = xhr.response;
-            reload();
+            reloadGraph();
         }
 
     });
 
-    xhr.send(null); // La requête est prête, on envoie tout !
+    xhr.send(null); 
 
 }
 
  
 
-function reload (){
+function reloadGraph(){
     simulation.stop();
 
     g.selectAll("circle")
