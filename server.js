@@ -15,7 +15,9 @@ app.get('/', function (req, res) {
 
 
 app.get('/sparql', function (req, res) {
-    sparql.getTriplesWithSubject(res, "http://skos.um.es/unescothes/C03689");
+    if (req.query.func === 'getTriplesByNameAndDegree') {
+        sparql.getTriplesByNameAndDegree(res, req.query.name, req.query.minDegree );
+    }
 });
 
 

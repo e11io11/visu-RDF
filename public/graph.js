@@ -1,8 +1,17 @@
 const svg = d3.select("svg");
-var g = svg.append("g");
+const g = svg.append("g");
+const linkG = g.append("g");
+const nodeG = g.append("g");
 
 const height = svg.attr("height");
 const width = svg.attr("width");
+
+const topLimit = 0 - height/3
+const bottomLimit = height + height/3
+const leftLimit = 0 - width/3
+const rightLimit = width + width/3
+
+var minDegree = 5
 
 data = {nodes: [], links: []};
 
@@ -13,22 +22,25 @@ const simulation = d3.forceSimulation()
                 return d.label;
             })
             .distance(100)
-            .strength(1))
+            .strength(0.1))
         .force("charge", d3.forceManyBody()
-            .strength(-20))
+            .strength(-200))
         .force("center", d3.forceCenter(width/2 , height/2))
+        .force("collide", d3.forceCollide(20))
         .on("tick", ticked); 
 
 
-function loadFile() {
+function getData(parameters) {
     console.log("loading file")
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/sparql');
+    xhr.open('GET', '/sparql'+parameters);
     xhr.responseType = 'json'
     xhr.addEventListener('readystatechange', function() { 
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) { 
-            console.log(xhr.response);
-            data = xhr.response;
+            var newData = xhr.response;
+            //console.log(newData);
+            addToData(newData)
+            console.log(data.nodes)
             reloadGraph();
         }
 
@@ -38,19 +50,53 @@ function loadFile() {
 
 }
 
+
+function addToData(newData){
+    //not a good complexity... very bad
+    //to be redone at some point probably
+    newData.links.forEach(link => {
+        var i = 0;
+        var alreadyHere = false;
+        var length = data.links.length
+        while (!alreadyHere && i<length) {
+            if (data.links[i].source === link.source 
+            && data.links[i].label === link.label
+            && data.links[i].target === link.target) {
+                alreadyHere = true;    
+            }
+            i+=1;      
+        }
+        if (!alreadyHere) {
+            data.links.push(link);
+        }
+    });
+    newData.nodes.forEach(node => {
+        var i = 0;
+        var alreadyHere = false;
+        var length = data.nodes.length
+        while (!alreadyHere && i<length) {
+            if (data.nodes[i].label === node.label) {
+                alreadyHere = true;
+            }
+            i+=1;
+        }
+        if (!alreadyHere) {
+            data.nodes.push(node);
+        }
+    });
+}
+
+
+var addSubsequent = function(d) {
+    getData('?func=getTriplesByNameAndDegree&name='+d.label+'&minDegree='+minDegree);
+}
  
 
 function reloadGraph(){
     simulation.stop();
 
-    g.selectAll("circle")
-        .data(data.nodes)
-        .join(
-            enter => enter.append("circle")
-                .attr("r", 10)
-        );
     
-    g.selectAll("line")
+    linkG.selectAll("line")
         .data(data.links)
         .join(
             enter => enter.append("line")
@@ -60,16 +106,27 @@ function reloadGraph(){
     simulation.nodes(data.nodes);
     simulation.force("link").links(data.links);
     simulation.alpha(1).restart();
+
+
+    nodeG.selectAll("circle")
+        .data(data.nodes)
+        .join(
+            enter => enter.append("circle")
+                .attr("r", 10)
+                .attr("stroke", "white")
+                .attr("stroke-width", 1)
+        )
+        .on("click", addSubsequent);
     
 };
 
 function ticked() {
     
-    g.selectAll("circle")
+    nodeG.selectAll("circle")
         .attr("cx", d => d.x)
         .attr("cy", d => d.y);
     
-    g.selectAll("line")
+    linkG.selectAll("line")
         .attr("x1", d => d.source.x)
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
@@ -110,7 +167,18 @@ function ticked() {
         .attr("y", function(d) { return d.y });
     */
 
-}   
+}
 
 
-loadFile();
+svg.call(d3.zoom()
+            .extent([[0, 0], [width, height]])
+            //.scaleExtent([1,8])
+            .on("zoom", zoomed));
+        
+        
+        function zoomed() {
+            g.attr("transform", d3.event.transform)
+        }
+
+getData('?func=getTriplesByNameAndDegree&name=http://skos.um.es/unescothes/C03379&minDegree='+minDegree);
+getData('?func=getTriplesByNameAndDegree&name=http://skos.um.es/unescothes/C02025&minDegree='+minDegree);
