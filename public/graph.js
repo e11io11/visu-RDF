@@ -1,7 +1,13 @@
+const urlBase = 'http://localhost:8080'
+
+
 const svg = d3.select("svg");
 const g = svg.append("g");
+
 const linkG = g.append("g");
 const nodeG = g.append("g");
+const linkTextG = g.append("g");
+const nodeTextG = g.append("g");
 
 const height = svg.attr("height");
 const width = svg.attr("width");
@@ -11,10 +17,24 @@ const bottomLimit = height + height/3
 const leftLimit = 0 - width/3
 const rightLimit = width + width/3
 
-var minDegree = 5
+var minDegree = 0;
+var limit = 100;
 
-data = {nodes: [], links: []};
+var showNodeText = true;
+var showLinkText = true;
 
+var data = {nodes: [], links: []};
+
+const prefixes = [
+    {name: 'ace:', value: 'http://www.semanticweb.org/XKG#'},
+    {name: 'xsd:', value: 'http://www.w3.org/2001/XMLSchema#'}];
+
+
+
+
+
+
+//======== FORCE SIMULATION ========
 
 const simulation = d3.forceSimulation()
     .force("link", d3.forceLink()
@@ -30,17 +50,27 @@ const simulation = d3.forceSimulation()
         .on("tick", ticked); 
 
 
+
+
+
+
+//======== DATA REQUEST ========
+
 function getData(parameters) {
-    console.log("loading file")
+    url = new URL('./sparql', urlBase)
+    parameters.forEach(param => {
+        url.searchParams.set(param.name, param.value)
+        console.log("name : "+param.name+", value : "+param.value)
+    });
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/sparql'+parameters);
+    xhr.open('GET', url);
     xhr.responseType = 'json'
     xhr.addEventListener('readystatechange', function() { 
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) { 
             var newData = xhr.response;
             //console.log(newData);
             addToData(newData)
-            console.log(data.nodes)
+            console.log(data.links)
             reloadGraph();
         }
 
@@ -52,16 +82,15 @@ function getData(parameters) {
 
 
 function addToData(newData){
-    //not a good complexity... very bad
-    //to be redone at some point probably
+    //not a good complexity... 
     newData.links.forEach(link => {
         var i = 0;
         var alreadyHere = false;
         var length = data.links.length
         while (!alreadyHere && i<length) {
-            if (data.links[i].source === link.source 
+            if (data.links[i].source.label === link.source 
             && data.links[i].label === link.label
-            && data.links[i].target === link.target) {
+            && data.links[i].target.label === link.target) {
                 alreadyHere = true;    
             }
             i+=1;      
@@ -88,9 +117,19 @@ function addToData(newData){
 
 
 var addSubsequent = function(d) {
-    getData('?func=getTriplesByNameAndDegree&name='+d.label+'&minDegree='+minDegree);
+    parameters = [{name: 'func', value: 'getTriplesByNameAndDegree'}, 
+                  {name: 'name', value: d.label}, 
+                  {name: 'minDegree', value: minDegree}, 
+                  {name: 'limit', value: limit}]
+    getData(parameters);
 }
  
+
+
+
+
+
+//======== GRAPH ELEMENTS ========
 
 function reloadGraph(){
     simulation.stop();
@@ -100,7 +139,7 @@ function reloadGraph(){
         .data(data.links)
         .join(
             enter => enter.append("line")
-                .attr("stroke-width", 3)
+                .attr("stroke-width", 1)
                 .attr("stroke", "black")
         );
     simulation.nodes(data.nodes);
@@ -116,9 +155,45 @@ function reloadGraph(){
                 .attr("stroke", "white")
                 .attr("stroke-width", 1)
         )
+        //Add subsequent node on click event
         .on("click", addSubsequent);
+
+    
+    linkTextG.selectAll("text")
+        .data(data.links)
+        .join(
+            enter => enter.append("text")
+                .text(d => checkForPrefix(d.label))
+                .attr("class", "linkText")
+        );
+    
+    
+    nodeTextG.selectAll("text")
+        .data(data.nodes)
+        .join(
+            enter => enter.append("text")
+                .text(d => checkForPrefix(d.label))
+                .attr("class", "nodeText")
+        );
     
 };
+
+
+function checkForPrefix(name) {
+    for (let i = 0; i < prefixes.length; i++) {
+        if (name.startsWith(prefixes[i].value)) {
+            return prefixes[i].name + name.split(prefixes[i].value)[1];
+        }
+    };
+    return name;
+}
+        
+
+
+
+
+
+//======== GRAPH ELEMENT POSITION ========
 
 function ticked() {
     
@@ -131,44 +206,22 @@ function ticked() {
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y)
-    /*
-    linkG
-        .attr("d", function(d) { 
-            var xOffset;
-            var yOffset;
-            if (d.source.x < d.target.x && d.source.y < d.target.y){
-                xOffset = 1+d.linkNum/10;
-                yOffset = 1-d.linkNum/10;
-            }
-            else if (d.source.x > d.target.x && d.source.y < d.target.y){
-                xOffset = 1+d.linkNum/10; 
-                yOffset = 1+d.linkNum/10;
-            }
-            else if (d.source.x > d.target.x && d.source.y > d.target.y){
-                xOffset = 1-d.linkNum/10; 
-                yOffset = 1+d.linkNum/10;
-            }
-            else {
-                xOffset = 1-d.linkNum/10; 
-                yOffset = 1-d.linkNum/10;
-            }
-
-            return "M" 	+ d.source.x + "," + d.source.y
-                + "Q" + ((d.source.x + d.target.x)*xOffset)/2 
-                + "," + ((d.source.y + d.target.y)*yOffset)/2
-                + "," + d.target.x + "," + d.target.y});
+   
+    linkTextG.selectAll("text")
+        .attr("x", d => (d.source.x + d.target.x)/2 + 5 )
+        .attr("y", d => (d.source.y + d.target.y)/2 - 5 );
     
-    linkTextG
-        .attr("x", function(d) { return (d.source.x + d.target.x)/2 + 5 })
-        .attr("y", function(d) { return (d.source.y + d.target.y)/2 - 5 });
-    
-    nodeTextG
-        .attr("x", function(d) { return d.x })
-        .attr("y", function(d) { return d.y });
-    */
-
+    nodeTextG.selectAll("text")
+        .attr("x", d => d.x + 11)
+        .attr("y", d => d.y - 3);
 }
 
+
+
+
+
+
+//======== ZOOM ========
 
 svg.call(d3.zoom()
             .extent([[0, 0], [width, height]])
@@ -176,9 +229,26 @@ svg.call(d3.zoom()
             .on("zoom", zoomed));
         
         
-        function zoomed() {
-            g.attr("transform", d3.event.transform)
-        }
+function zoomed() {
+    g.attr("transform", d3.event.transform)
+}
 
-getData('?func=getTriplesByNameAndDegree&name=http://skos.um.es/unescothes/C03379&minDegree='+minDegree);
-getData('?func=getTriplesByNameAndDegree&name=http://skos.um.es/unescothes/C02025&minDegree='+minDegree);
+
+
+
+
+
+//======== START GRAPH ========
+
+//getData('?func=getTriplesByNameAndDegree&name=http://skos.um.es/unescothes/C03379&minDegree='+minDegree+'limit='+limit);
+//getData('?func=getTriplesByNameAndDegree&name=http://skos.um.es/unescothes/C02025&minDegree='+minDegree+'limit='+limit);
+
+getData([{name: 'func', value: 'getAllTriples'}, {name: 'limit', value: limit}])
+
+//getData(`?func=getTriplesByNameAndDegree&name=http://www.semanticweb.org/XKG#00648A3D&minDegree=5&limit=100`)
+
+var test = [{name: 'func', value: 'getTriplesByNameAndDegree'}, 
+        {name: 'name', value: 'ace:Author'}, 
+        {name: 'minDegree', value: minDegree}, 
+        {name: 'limit', value: limit}]
+//getData(test)

@@ -1,14 +1,16 @@
 const SparqlClient = require('sparql-http-client');
 
-const endpointUrl = 'http://localhost:3030/ds/sparql';
+const endpointUrl = 'http://localhost:3030/nri/sparql';
 const client = new SparqlClient({ endpointUrl });
 
 
+const prefixes = `
+	PREFIX ace: <http://www.semanticweb.org/XKG#> 
+	PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>`
 
-
-exports.getTriplesWithSubject = function(res, subject) {
-	var query = `SELECT * WHERE { <` + subject + `> ?label ?target }`;
-
+exports.getTriplesWithSubject = function(res, subject, limit) {
+	var query = `SELECT * WHERE { <` + subject + `> ?label ?target } LIMIT ` + limit;
+	
 	var data = {links: [], nodes: {}};
 	data.nodes[subject] = {label: subject};
  
@@ -31,8 +33,8 @@ exports.getTriplesWithSubject = function(res, subject) {
 
 
 
-exports.getTriplesWithObject = function(res, object) {
-	var query = `SELECT * WHERE { ?source ?label <` + object + `> }`;
+exports.getTriplesWithObject = function(res, object, limit) {
+	var query = prefixes + `SELECT * WHERE { ?source ?label <` + object + `> } LIMIT ` + limit;
 
 	var data = {links: [], nodes: {}};
 	data.nodes[object] = {label: object};
@@ -56,16 +58,40 @@ exports.getTriplesWithObject = function(res, object) {
 
 
 
-exports.getTriplesByName = function(res, name) {
-	var query = `
+exports.getAllTriples = function(res, limit) {
+	var query = prefixes + `SELECT * WHERE { ?source ?label ?target } LIMIT ` + limit;
+
+	var data = {links: [], nodes: {}};
+ 
+ 	onData = function(row){
+		var current = {};
+    	Object.entries(row).forEach(([key, value]) => {
+			console.log(`${key}: ${value.value} (${value.termType})`);
+			current[key] = value.value;
+			if (key === 'target' || key === 'source'){
+				data.nodes[value.value] = {label: value.value};
+			}
+			 
+		});
+		data.links.push(current);
+	}
+
+	main(res, query, data, onData);
+} 
+
+
+
+exports.getTriplesByName = function(res, name, limit) {
+	name = formatName(name)
+	var query = prefixes + `
 	SELECT ?source ?label ?target
 	WHERE
 	{
-	  { <` + name + `> ?label ?target }
+	  { `+ name +` ?label ?target }
 	  UNION
-	  { ?source ?label <` + name + `> }
+	  { ?source ?label `+ name +` }
 	}
-	`;
+	LIMIT ` + limit;
 
 	var data = {links: [], nodes: {}};
 	data.nodes[name] = {label: name};
@@ -96,14 +122,13 @@ exports.getTriplesByName = function(res, name) {
 
 
 exports.getNodeDegree = function(res, name) {
-	var query = `
+	var query = prefixes + `
 	SELECT (COUNT(*) as ?degree) 
 	{ 
-		{ <` + name + `> ?p ?o } 
+		{ `+ name +` ?p ?o } 
 		UNION
-		{ ?s ?p <` + name + `> }
-	}
-	`;
+		{ ?s ?p `+ name +` }
+	}`;
 
 	var degree;
  
@@ -120,15 +145,16 @@ exports.getNodeDegree = function(res, name) {
 
 
 
-exports.getTriplesByNameAndDegree = function(res, name, minDegree) {
-	var query = `
+exports.getTriplesByNameAndDegree = function(res, name, minDegree, limit) {
+	formatedName = formatName(name)
+	var query = prefixes + `
 	SELECT ?source ?label ?target
 	WHERE
 	{
 		{
 			SELECT (?x as ?target) (?p as ?label) ?degree
 			{
-				{ <` + name + `> ?p ?x }
+				{ `+ formatedName +` ?p ?x }
 				{
 					SELECT ?x (COUNT(*) as ?degree) 
 					{ 
@@ -145,7 +171,7 @@ exports.getTriplesByNameAndDegree = function(res, name, minDegree) {
 		{
 			SELECT (?x as ?source) (?p as ?label) ?degree
 			{
-				{ ?x ?p <` + name + `> }
+				{ ?x ?p ` + formatedName + ` }
 				{
 					SELECT ?x (COUNT(*) as ?degree) 
 					{ 
@@ -159,8 +185,9 @@ exports.getTriplesByNameAndDegree = function(res, name, minDegree) {
 			}
 		}
 	}
-	LIMIT 100
-	`;
+	LIMIT ` + limit;
+
+	console.log(query)
 
 	var data = {links: [], nodes: {}};
 	data.nodes[name] = {label: name};
@@ -194,6 +221,12 @@ exports.getTriplesByNameAndDegree = function(res, name, minDegree) {
 
 
 
+
+
+
+
+
+
  
 async function main (res, query, data, onData) {
 	const stream = await client.query.select(query);
@@ -213,15 +246,16 @@ async function main (res, query, data, onData) {
 
 
 
-function uniqueArray( ar ) {
-	var j = {};
-  
-	ar.forEach( function(v) {
-	  j[v+ '::' + typeof v] = v;
-	});
-  
-	return Object.keys(j).map(function(v){
-	  return j[v];
-	});
-  } 
  
+ 
+function formatName(name) {
+	if (name.startsWith('http://')) {
+		return '<'+name+'>'
+	}
+	else if (name.includes(':')) {
+		return name
+	}
+	else {
+		return '\"'+name+'\"'
+	}
+}
