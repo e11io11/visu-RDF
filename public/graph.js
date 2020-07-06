@@ -1,8 +1,10 @@
+//server url
 const urlBase = 'http://localhost:8080'
 
 
 const svg = d3.select("svg");
 const g = svg.append("g");
+
 
 const linkG = g.append("g");
 const nodeG = g.append("g");
@@ -19,6 +21,8 @@ const rightLimit = width + width/3
 
 var minDegree = 0;
 var limit = 100;
+var offset = 0;
+var currentSearch = ""
 
 var showNodeText = true;
 var showLinkText = true;
@@ -29,7 +33,7 @@ const prefixes = [
     {name: 'ace:', value: 'http://www.semanticweb.org/XKG#'},
     {name: 'xsd:', value: 'http://www.w3.org/2001/XMLSchema#'}];
 
-
+var currentList = [];
 
 
 
@@ -56,11 +60,11 @@ const simulation = d3.forceSimulation()
 
 //======== DATA REQUEST ========
 
-function getData(parameters) {
+function serverRequest(parameters, callback) {
     url = new URL('./sparql', urlBase)
     parameters.forEach(param => {
         url.searchParams.set(param.name, param.value)
-        console.log("name : "+param.name+", value : "+param.value)
+        //console.log("name : "+param.name+", value : "+param.value)
     });
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url);
@@ -68,10 +72,7 @@ function getData(parameters) {
     xhr.addEventListener('readystatechange', function() { 
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) { 
             var newData = xhr.response;
-            //console.log(newData);
-            addToData(newData)
-            console.log(data.links)
-            reloadGraph();
+            callback(newData);
         }
 
     });
@@ -79,6 +80,11 @@ function getData(parameters) {
     xhr.send(null); 
 
 }
+
+var addToGraph = function(newData) {
+    addToData(newData);
+    reloadGraph();
+} 
 
 
 function addToData(newData){
@@ -121,7 +127,7 @@ var addSubsequent = function(d) {
                   {name: 'name', value: d.label}, 
                   {name: 'minDegree', value: minDegree}, 
                   {name: 'limit', value: limit}]
-    getData(parameters);
+    serverRequest(parameters, addToGraph);
 }
  
 
@@ -159,13 +165,17 @@ function reloadGraph(){
         .on("click", addSubsequent);
 
     
+
     linkTextG.selectAll("text")
         .data(data.links)
         .join(
             enter => enter.append("text")
                 .text(d => checkForPrefix(d.label))
-                .attr("class", "linkText")
+                .attr("class", "linkText"),
+            update => update
+                .text(d => checkForPrefix(d.label))
         );
+    
     
     
     nodeTextG.selectAll("text")
@@ -173,15 +183,19 @@ function reloadGraph(){
         .join(
             enter => enter.append("text")
                 .text(d => checkForPrefix(d.label))
-                .attr("class", "nodeText")
+                .attr("class", "nodeText"),
+            update => update
+                .text(d => checkForPrefix(d.label))
         );
     
 };
 
 
 function checkForPrefix(name) {
+    console.log("name: "+name)
     for (let i = 0; i < prefixes.length; i++) {
         if (name.startsWith(prefixes[i].value)) {
+            console.log("with prefix: "+prefixes[i].name + name.split(prefixes[i].value)[1])
             return prefixes[i].name + name.split(prefixes[i].value)[1];
         }
     };
@@ -230,7 +244,7 @@ svg.call(d3.zoom()
         
         
 function zoomed() {
-    g.attr("transform", d3.event.transform)
+    g.attr("transform", d3.event.transform);
 }
 
 
@@ -240,15 +254,109 @@ function zoomed() {
 
 //======== START GRAPH ========
 
-//getData('?func=getTriplesByNameAndDegree&name=http://skos.um.es/unescothes/C03379&minDegree='+minDegree+'limit='+limit);
-//getData('?func=getTriplesByNameAndDegree&name=http://skos.um.es/unescothes/C02025&minDegree='+minDegree+'limit='+limit);
+serverRequest([{name: 'func', value: 'getAllTriples'}, {name: 'limit', value: limit}], addToGraph)
 
-getData([{name: 'func', value: 'getAllTriples'}, {name: 'limit', value: limit}])
 
-//getData(`?func=getTriplesByNameAndDegree&name=http://www.semanticweb.org/XKG#00648A3D&minDegree=5&limit=100`)
 
-var test = [{name: 'func', value: 'getTriplesByNameAndDegree'}, 
-        {name: 'name', value: 'ace:Author'}, 
+
+
+
+
+
+
+
+
+
+
+//======== SIDE BAR ========
+
+
+
+var updateList = function(nodeList) {
+    currentList = nodeList;
+    var table = $('#nodeList');
+    table.empty();
+    table.append('<tr class="header"><th>Name</th><th>Degree</th></tr>')
+    nodeList.forEach(node => {
+        table.append('<tr><td class="nodeName">'+checkForPrefix(node.node)+'</td><td>'+node.degree+'</td></tr>');
+        //console.log("updating: <tr><td>"+node.node+"</td><td>"+node.degree+"</td></tr>");
+    });
+}
+
+var newGraph = function(newData) {
+    console.log(newData);
+    data = newData;
+    reloadGraph();
+}
+
+$("#nodeList").on("click", "tr", function(event) {
+    console.log($(this).index());
+    serverRequest([
+        {name: 'func', value: 'getTriplesByNameAndDegree'},
+        {name: 'name', value: currentList[$(this).index()-1].node}, 
         {name: 'minDegree', value: minDegree}, 
-        {name: 'limit', value: limit}]
-//getData(test)
+        {name: 'limit', value: limit}],
+        newGraph);
+});
+
+
+
+$("#previous").click(function() {
+    if (offset >= 0) {
+        offset -= 100;
+    }
+    serverRequest([
+        {name: "func", value: "getNodesWithFilter"}, 
+        {name: "offset", value: offset}, 
+        {name: "limit", value: limit},
+        {name: "filter", value: currentSearch}], 
+        updateList);
+});
+
+
+$("#next").click(function() {
+    offset += 100;
+
+    serverRequest([
+        {name: "func", value: "getNodesWithFilter"}, 
+        {name: "offset", value: offset}, 
+        {name: "limit", value: limit},
+        {name: "filter", value: currentSearch}], 
+        updateList);
+});
+
+
+$("#search").click(function() {
+    var filter = $("#searchInput").val();
+    console.log("attempting to search : "+filter)
+    //There is probably a better way to sanitize input.
+    if (filter.includes('"')) {
+        alert("bad input");
+    }
+    else {
+        offset = 0;
+        currentSearch = filter;
+        serverRequest([
+            {name: "func", value: "getNodesWithFilter"}, 
+            {name: "offset", value: offset}, 
+            {name: "limit", value: limit},
+            {name: "filter", value: currentSearch}], 
+            updateList);
+
+    }
+});
+
+
+$("#minDegree").children('input[type=range]').change(function() {
+    //console.log("change")
+    $("#minDegree").children("label").text("Minimum degree : "+$(this).val())
+    minDegree = $(this).val();
+});
+
+$("#limit").children('input[type=range]').change(function() {
+    $("#limit").children("label").text("Maximum number of added nodes : "+$(this).val())
+    limit = $(this).val();
+});
+
+
+serverRequest([{name: "func", value: "getNodes"}, {name: "offset", value: offset}, {name: "limit", value: limit}], updateList);

@@ -13,13 +13,21 @@ app.get('/', function (req, res) {
 
 
 app.get('/sparql', function (req, res) {
-    console.log("request :"+ req.query.name)
+    console.log("function : "+req.query.func)
     if (req.query.func === 'getTriplesByNameAndDegree') {
         sparql.getTriplesByNameAndDegree(res, req.query.name, req.query.minDegree, req.query.limit);
     }
 
     else if (req.query.func === 'getAllTriples') {
         sparql.getAllTriples(res, req.query.limit);
+    }
+
+    else if (req.query.func === 'getNodes') {
+        sparql.getNodes(res, req.query.limit, req.query.offset);
+    }
+
+    else if (req.query.func === 'getNodesWithFilter') {
+        sparql.getNodesWithFilter(res, req.query.limit, req.query.offset, req.query.filter);
     }
     else {
         console.log("function not found");

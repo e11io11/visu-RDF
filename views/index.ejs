@@ -4,9 +4,39 @@
 	<title>RDF visualisation tool</title>
 	<link rel="stylesheet" href="./style.css">
 	<script src="https://d3js.org/d3.v5.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
-	<svg width="1100" height="550" style="border-style: solid;"></svg>
+	<svg width="1100" height="550" class="graphContainer"></svg>
+
+	<div id="sidenav">
+		<div id="rangeDiv">
+			<div id="minDegree">
+				<label>Minimum degree</label><br>
+				<input type="range" min="0" max="500" value="0" class="slider">
+			</div>
+			<br>
+			<div id="limit">
+				<label>Maximum number of added nodes</label><br>
+				<input type="range" min="1" max="1000" value="100" class="slider">
+			</div>
+		</div>
+		<div id="searchDiv">
+			<input id="searchInput" type="text" placeholder="Search..">
+			<button id="search">search</button>
+		</div>
+		<div class="list">
+			<table id="nodeList">
+				<tr class="header"><th>Name</th><th>Degree</th></tr>
+			</table>
+		</div>
+		<div id="buttonDiv">
+			<button id="previous">&lt &lt  previous</button>
+			<button id="next">next &gt &gt</button>
+		</div>
+	</div>
+
+	  
     <script src="./graph.js"></script>
 </body>
 </html>

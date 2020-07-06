@@ -28,7 +28,14 @@ exports.getTriplesWithSubject = function(res, subject, limit) {
 		data.links.push(current);
 	}
 
-	main(res, query, data, onData);
+
+	onEnd = function() {
+		data.nodes = Object.values(data.nodes);
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, data, onData, onEnd);
 } 
 
 
@@ -53,7 +60,13 @@ exports.getTriplesWithObject = function(res, object, limit) {
 		data.links.push(current);
 	}
 
-	main(res, query, data, onData);
+	onEnd = function() {
+		data.nodes = Object.values(data.nodes);
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, data, onData, onEnd);
 } 
 
 
@@ -66,7 +79,7 @@ exports.getAllTriples = function(res, limit) {
  	onData = function(row){
 		var current = {};
     	Object.entries(row).forEach(([key, value]) => {
-			console.log(`${key}: ${value.value} (${value.termType})`);
+			//console.log(`${key}: ${value.value} (${value.termType})`);
 			current[key] = value.value;
 			if (key === 'target' || key === 'source'){
 				data.nodes[value.value] = {label: value.value};
@@ -76,7 +89,13 @@ exports.getAllTriples = function(res, limit) {
 		data.links.push(current);
 	}
 
-	main(res, query, data, onData);
+	onEnd = function() {
+		data.nodes = Object.values(data.nodes);
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, data, onData, onEnd);
 } 
 
 
@@ -117,10 +136,16 @@ exports.getTriplesByName = function(res, name, limit) {
 		data.links.push(current);
 	}
 
-	main(res, query, data, onData);
+	onEnd = function() {
+		data.nodes = Object.values(data.nodes);
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, data, onData, onEnd);
 } 
 
-
+/*
 exports.getNodeDegree = function(res, name) {
 	var query = prefixes + `
 	SELECT (COUNT(*) as ?degree) 
@@ -138,8 +163,91 @@ exports.getNodeDegree = function(res, name) {
 		});
 	}
 
-	main(res, query, degree, onData);
+	onEnd = function() {
+		data.nodes = Object.values(data.nodes);
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, degree, onData, onEnd);
 }
+*/
+
+
+
+
+
+
+exports.getNodes = function(res, limit, offset) {
+	var query = prefixes + `
+	SELECT ?node (COUNT(*) as ?degree) 
+	{ 
+		{ ?node ?p ?o } 
+		UNION
+		{ ?s ?p ?node }
+	}
+	GROUP BY ?node
+	ORDER BY asc(?node)
+	OFFSET `+ offset +`
+	LIMIT `+ limit;
+
+	var data = [];
+ 
+	console.log(query)
+
+ 	onData = function(row){
+		var current = {}
+    	Object.entries(row).forEach(([key, value]) => {
+			current[key] = value.value;
+		});
+		data.push(current);
+	}
+
+	onEnd = function() {
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, data, onData, onEnd);
+}
+
+
+
+exports.getNodesWithFilter = function(res, limit, offset, filter) {
+	var query = prefixes + `
+	SELECT ?node (COUNT(*) as ?degree)
+	{
+		{ ?node ?p ?o .FILTER regex(str(?node), "`+ filter +`") }
+		UNION
+		{ ?s ?p ?node .FILTER regex(str(?node), "`+ filter +`")}
+	}
+    GROUP BY ?node
+    ORDER BY asc(?node)
+	OFFSET `+ offset +`
+	LIMIT `+ limit;
+
+	var data = [];
+ 
+	console.log(query)
+
+ 	onData = function(row){
+		var current = {}
+    	Object.entries(row).forEach(([key, value]) => {
+			current[key] = value.value;
+		});
+		data.push(current);
+	}
+
+	onEnd = function() {
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, data, onData, onEnd);
+}
+
+
+
 
 
 
@@ -187,10 +295,11 @@ exports.getTriplesByNameAndDegree = function(res, name, minDegree, limit) {
 	}
 	LIMIT ` + limit;
 
-	console.log(query)
+	//console.log(query)
 
 	var data = {links: [], nodes: {}};
 	data.nodes[name] = {label: name};
+	console.log(data.nodes[name])
  
 	onData = function(row){
 		var current = {};
@@ -211,7 +320,13 @@ exports.getTriplesByNameAndDegree = function(res, name, minDegree, limit) {
 		data.links.push(current);
 	}
 
-	main(res, query, data, onData);
+	onEnd = function() {
+		data.nodes = Object.values(data.nodes);
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, data, onData, onEnd);
 }
 
 
@@ -228,21 +343,20 @@ exports.getTriplesByNameAndDegree = function(res, name, minDegree, limit) {
 
 
  
-async function main (res, query, data, onData) {
+async function main (res, query, data, onData, onEnd){
+
 	const stream = await client.query.select(query);
 
  
  	stream.on('data', onData);
 
-	stream.on('end', () => {
-		data.nodes = Object.values(data.nodes);
-		res.send(data);
-        console.log('All done');
-	})
+	stream.on('end', onEnd);
+
   	stream.on('error', err => {
     	console.error(err);
   	});
 }
+
 
 
 

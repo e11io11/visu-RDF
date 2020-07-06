@@ -1,5 +1,8 @@
-.linkText{
+* {
     font-family: Arial, Helvetica, sans-serif;
+}
+
+.linkText{
     /*font-weight: bold;*/
     font-size: 7px;
     /*
@@ -17,7 +20,6 @@
 }
 
 .nodeText{
-    font-family: Arial, Helvetica, sans-serif;
     font-weight: bold;
     font-size: 8px;
     /*
@@ -52,3 +54,46 @@
     stroke: grey;
     stroke-width: 1.5;
 }
+
+
+
+
+
+
+#sidenav {
+    /*https://www.w3schools.com/howto/howto_css_fixed_sidebar.asp*/
+    height: 100%; /* Full-height: remove this if you want "auto" height */
+    width: 250px; /* Set the width of the sidebar */
+    position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+    z-index: 1; /* Stay on top */
+    top: 0; /* Stay at the top */
+    right: 0;
+    background-color: grey;
+    overflow: hidden; /* Disable scroll */
+    padding-top: 20px;
+    display: flex;
+    flex-flow: column;
+}
+
+
+#graphContainer {
+    height: 100%; 
+    width: 100%; 
+    
+}
+
+.list {
+    flex: 1 1 auto;
+    overflow-y:auto;
+    height: 100%;
+}
+
+
+
+#buttonDiv {
+    height: 60px;
+}
+
+
+
+
