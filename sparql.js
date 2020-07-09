@@ -1,6 +1,6 @@
 const SparqlClient = require('sparql-http-client');
 
-const endpointUrl = 'http://localhost:3030/nri/sparql';
+const endpointUrl = 'http://localhost:3030/nri2/sparql';
 const client = new SparqlClient({ endpointUrl });
 
 

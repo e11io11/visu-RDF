@@ -11,23 +11,22 @@ const nodeG = g.append("g");
 const linkTextG = g.append("g");
 const nodeTextG = g.append("g");
 
-const height = svg.attr("height");
-const width = svg.attr("width");
-
-const topLimit = 0 - height/3
-const bottomLimit = height + height/3
-const leftLimit = 0 - width/3
-const rightLimit = width + width/3
+const height = window.innerHeight;
+const width = window.innerWidth;
 
 var minDegree = 0;
 var limit = 100;
 var offset = 0;
-var currentSearch = ""
+var currentSearch = "";
+var maximumBackup = 500;
+var currentBackupIndex = -1;
 
 var showNodeText = true;
 var showLinkText = true;
 
 var data = {nodes: [], links: []};
+
+var backupArray = [];
 
 const prefixes = [
     {name: 'ace:', value: 'http://www.semanticweb.org/XKG#'},
@@ -49,7 +48,7 @@ const simulation = d3.forceSimulation()
             .strength(0.1))
         .force("charge", d3.forceManyBody()
             .strength(-200))
-        .force("center", d3.forceCenter(width/2 , height/2))
+        .force("center", d3.forceCenter(width/2, height/2))
         .force("collide", d3.forceCollide(20))
         .on("tick", ticked); 
 
@@ -83,8 +82,49 @@ function serverRequest(parameters, callback) {
 
 var addToGraph = function(newData) {
     addToData(newData);
+    backupData();
     reloadGraph();
-} 
+}
+
+
+function backupData(){
+    if (currentBackupIndex + 1 < maximumBackup) {
+        currentBackupIndex += 1;
+        if (currentBackupIndex < backupArray.length) {
+            backupArray = backupArray.slice(0, currentBackupIndex);
+            console.log("sliced !")
+        }
+        backupArray.push(copy(data));
+        console.log("backed up data ! index = "+currentBackupIndex)
+        console.log(backupArray)
+    }
+}
+
+
+function undo(){
+    if (currentBackupIndex - 1 >= 0) {
+        currentBackupIndex -= 1;
+        data = backupArray[currentBackupIndex];
+        reloadGraph();
+        console.log("undone ! index = "+currentBackupIndex)
+        console.log(data)
+    }
+}
+
+function redo(){
+    if (currentBackupIndex + 1 < backupArray.length) {
+        currentBackupIndex +=1;
+        data = backupArray[currentBackupIndex];
+        reloadGraph();
+        console.log("redone ! index = "+currentBackupIndex)
+        console.log(data)
+    }
+}
+
+
+function copy(data){
+    return {nodes: [...data.nodes], links: [...data.links]}
+}
 
 
 function addToData(newData){
@@ -192,10 +232,10 @@ function reloadGraph(){
 
 
 function checkForPrefix(name) {
-    console.log("name: "+name)
+    //console.log("name: "+name)
     for (let i = 0; i < prefixes.length; i++) {
         if (name.startsWith(prefixes[i].value)) {
-            console.log("with prefix: "+prefixes[i].name + name.split(prefixes[i].value)[1])
+            //console.log("with prefix: "+prefixes[i].name + name.split(prefixes[i].value)[1])
             return prefixes[i].name + name.split(prefixes[i].value)[1];
         }
     };
@@ -284,13 +324,14 @@ var updateList = function(nodeList) {
 }
 
 var newGraph = function(newData) {
-    console.log(newData);
+    //console.log(newData);
     data = newData;
+    backupData();
     reloadGraph();
 }
 
 $("#nodeList").on("click", "tr", function(event) {
-    console.log($(this).index());
+    //console.log($(this).index());
     serverRequest([
         {name: 'func', value: 'getTriplesByNameAndDegree'},
         {name: 'name', value: currentList[$(this).index()-1].node}, 
@@ -328,8 +369,9 @@ $("#next").click(function() {
 
 $("#search").click(function() {
     var filter = $("#searchInput").val();
-    console.log("attempting to search : "+filter)
+    //console.log("attempting to search : "+filter)
     //There is probably a better way to sanitize input.
+    //I am not sure if this is sufficient
     if (filter.includes('"')) {
         alert("bad input");
     }
@@ -358,5 +400,14 @@ $("#limit").children('input[type=range]').change(function() {
     limit = $(this).val();
 });
 
+$('#undo').click(function() {
+    undo();
+});
+
+$('#redo').click(function() {
+    redo();
+})
+
 
 serverRequest([{name: "func", value: "getNodes"}, {name: "offset", value: offset}, {name: "limit", value: limit}], updateList);
+

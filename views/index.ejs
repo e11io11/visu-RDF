@@ -7,17 +7,22 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
-	<svg width="1100" height="550" class="graphContainer"></svg>
+	<svg id="graphContainer"></svg>
+
+	<div id="undoRedoButtons">
+		<button id="undo">undo</button>
+		<button id="redo">redo</button>
+	</div>
 
 	<div id="sidenav">
 		<div id="rangeDiv">
 			<div id="minDegree">
-				<label>Minimum degree</label><br>
+				<label>Minimum degree : 0</label><br>
 				<input type="range" min="0" max="500" value="0" class="slider">
 			</div>
 			<br>
 			<div id="limit">
-				<label>Maximum number of added nodes</label><br>
+				<label>Maximum number of added nodes : 100</label><br>
 				<input type="range" min="1" max="1000" value="100" class="slider">
 			</div>
 		</div>
@@ -30,7 +35,7 @@
 				<tr class="header"><th>Name</th><th>Degree</th></tr>
 			</table>
 		</div>
-		<div id="buttonDiv">
+		<div id="prevNextButtons">
 			<button id="previous">&lt &lt  previous</button>
 			<button id="next">next &gt &gt</button>
 		</div>
