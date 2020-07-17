@@ -8,8 +8,24 @@ const g = svg.append("g");
 
 const linkG = g.append("g");
 const nodeG = g.append("g");
-const linkTextG = g.append("g");
-const nodeTextG = g.append("g");
+const linkTextG = g.append("g").attr("id", "linkTextG");
+const nodeTextG = g.append("g").attr("id", "nodeTextG");
+const arrowHeadG = g.append("svg:defs")
+    .selectAll("marker")
+        .data(["head"])
+        .enter().append("svg:marker")
+            .attr("id", String)
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 0)
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .attr("class", "arrowHead")
+        .append("svg:path")
+            .attr("d", "M0,-5L10,0L0,5");
+            
+
 
 const height = window.innerHeight;
 const width = window.innerWidth;
@@ -18,16 +34,19 @@ var minDegree = 0;
 var limit = 100;
 var offset = 0;
 var currentSearch = "";
-var maximumBackup = 500;
+var maximumBackup = 30;
 var currentBackupIndex = -1;
 
 var showNodeText = true;
 var showLinkText = true;
 
+var currentAction = "add"
+
 var data = {nodes: [], links: []};
 
 var backupArray = [];
 
+//prefixes have to be added manually
 const prefixes = [
     {name: 'ace:', value: 'http://www.semanticweb.org/XKG#'},
     {name: 'xsd:', value: 'http://www.w3.org/2001/XMLSchema#'}];
@@ -44,7 +63,7 @@ const simulation = d3.forceSimulation()
             .id(function(d) {
                 return d.label;
             })
-            .distance(100)
+            .distance(200)
             .strength(0.1))
         .force("charge", d3.forceManyBody()
             .strength(-200))
@@ -90,14 +109,17 @@ var addToGraph = function(newData) {
 function backupData(){
     if (currentBackupIndex + 1 < maximumBackup) {
         currentBackupIndex += 1;
-        if (currentBackupIndex < backupArray.length) {
-            backupArray = backupArray.slice(0, currentBackupIndex);
-            console.log("sliced !")
-        }
-        backupArray.push(copy(data));
-        console.log("backed up data ! index = "+currentBackupIndex)
-        console.log(backupArray)
     }
+    else {
+        backupArray.shift();
+    }
+    if (currentBackupIndex < backupArray.length) {
+        backupArray = backupArray.slice(0, currentBackupIndex);
+        //console.log("sliced !")
+    }
+    backupArray.push(copy(data));
+    //console.log("backed up data ! index = "+currentBackupIndex)
+    //console.log(backupArray)
 }
 
 
@@ -106,8 +128,8 @@ function undo(){
         currentBackupIndex -= 1;
         data = backupArray[currentBackupIndex];
         reloadGraph();
-        console.log("undone ! index = "+currentBackupIndex)
-        console.log(data)
+        //console.log("undone ! index = "+currentBackupIndex)
+        //console.log(data)
     }
 }
 
@@ -116,8 +138,8 @@ function redo(){
         currentBackupIndex +=1;
         data = backupArray[currentBackupIndex];
         reloadGraph();
-        console.log("redone ! index = "+currentBackupIndex)
-        console.log(data)
+        //console.log("redone ! index = "+currentBackupIndex)
+        //console.log(data)
     }
 }
 
@@ -162,12 +184,85 @@ function addToData(newData){
 }
 
 
+var action = function(d) {
+    if (currentAction === "add") {
+        addSubsequent(d);
+    }
+    else {
+        removeNode(d);
+    }
+}
+
 var addSubsequent = function(d) {
     parameters = [{name: 'func', value: 'getTriplesByNameAndDegree'}, 
                   {name: 'name', value: d.label}, 
                   {name: 'minDegree', value: minDegree}, 
                   {name: 'limit', value: limit}]
     serverRequest(parameters, addToGraph);
+}
+
+
+var removeNode = function(d) {
+    //console.log("removing : "+d.label)
+    var i = 0;
+    while (i < data.links.length) {
+        link = data.links[i];
+        if (link.source.label === d.label || link.target.label === d.label) {
+            //remove link from data
+            //console.log("removing from data.links")
+            //console.log(data.links[i])
+            data.links.splice(i, 1);
+            
+            if (link.source.label === d.label) {
+                var otherNode = link.target.label;
+            }
+            else {
+                var otherNode = link.source.label;
+            }
+            //we check if the other node is no longer linked to anything
+            var j = 0
+            var found = false;
+            while (j < data.links.length && !found) {
+                if (data.links[j].source.label === otherNode || data.links[j].target.label === otherNode) {
+                    found = true;
+                }
+                j+=1
+            }
+            if (!found) {
+                //if it is no longer linked to anything we remove the node
+                var done = false;
+                var j = 0;
+                while (j < data.nodes.length && !done) {
+                    if (data.nodes[j].label === otherNode) {
+                        data.nodes.splice(j, 1);
+                        done = true
+                    }  
+                    j += 1 
+                }
+            }
+        }
+        else {
+            i += 1;
+        }
+    }
+
+    //we remove the node itself
+    
+    var i = 0;
+    var done = false;
+    while (i < data.nodes.length && !done) {
+        if (data.nodes[i].label === d.label) {
+            //console.log("removing from data.nodes")
+            //console.log(data.nodes[i])
+            data.nodes.splice(i, 1);
+            done = true;
+        }  
+        i += 1 
+    }
+    
+    console.log(data)
+    backupData();
+    reloadGraph();
 }
  
 
@@ -181,12 +276,12 @@ function reloadGraph(){
     simulation.stop();
 
     
-    linkG.selectAll("line")
+    linkG.selectAll("polyline")
         .data(data.links)
         .join(
-            enter => enter.append("line")
-                .attr("stroke-width", 1)
-                .attr("stroke", "black")
+            enter => enter.append("polyline")
+                .attr("class", "line")
+                .attr("marker-mid", "url(#head)")
         );
     simulation.nodes(data.nodes);
     simulation.force("link").links(data.links);
@@ -198,11 +293,15 @@ function reloadGraph(){
         .join(
             enter => enter.append("circle")
                 .attr("r", 10)
-                .attr("stroke", "white")
-                .attr("stroke-width", 1)
+                .attr("class", "node")
         )
         //Add subsequent node on click event
-        .on("click", addSubsequent);
+        .on("dblclick", action)
+        //drag behavior
+        .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
 
     
 
@@ -241,7 +340,6 @@ function checkForPrefix(name) {
     };
     return name;
 }
-        
 
 
 
@@ -255,12 +353,22 @@ function ticked() {
         .attr("cx", d => d.x)
         .attr("cy", d => d.y);
     
+    /*
     linkG.selectAll("line")
         .attr("x1", d => d.source.x)
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y)
-   
+    */
+    
+    linkG.selectAll("polyline")
+        .attr("points", function(d) {
+            return d.source.x + "," + d.source.y + " " + 
+                (d.source.x + d.target.x)/2 + "," + (d.source.y + d.target.y)/2 + " " +
+                d.target.x + "," + d.target.y; 
+        });
+        
+
     linkTextG.selectAll("text")
         .attr("x", d => (d.source.x + d.target.x)/2 + 5 )
         .attr("y", d => (d.source.y + d.target.y)/2 - 5 );
@@ -280,7 +388,9 @@ function ticked() {
 svg.call(d3.zoom()
             .extent([[0, 0], [width, height]])
             //.scaleExtent([1,8])
-            .on("zoom", zoomed));
+            .on("zoom", zoomed))
+            //disables zoom on double click
+            .on("dblclick.zoom", null);
         
         
 function zoomed() {
@@ -292,9 +402,34 @@ function zoomed() {
 
 
 
+//======== NODE DRAG ========
+
+function dragstarted(d) {
+    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+}
+    
+function dragged(d) {
+    d.fx = d3.event.x;
+    d.fy = d3.event.y;
+}
+    
+function dragended(d) {
+    if (!d3.event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+}
+
+
+
+
+
 //======== START GRAPH ========
 
-serverRequest([{name: 'func', value: 'getAllTriples'}, {name: 'limit', value: limit}], addToGraph)
+serverRequest([{name: 'func', value: 'getInitTriples'}, {name: 'limit', value: limit}], addToGraph)
+
+//serverRequest([{name: 'func', value: 'getAllTriples'}], addToGraph)
 
 
 
@@ -308,7 +443,7 @@ serverRequest([{name: 'func', value: 'getAllTriples'}, {name: 'limit', value: li
 
 
 
-//======== SIDE BAR ========
+//======== NAVIGATION ========
 
 
 
@@ -327,10 +462,11 @@ var newGraph = function(newData) {
     //console.log(newData);
     data = newData;
     backupData();
+    console.log(data)
     reloadGraph();
 }
 
-$("#nodeList").on("click", "tr", function(event) {
+$("#nodeList").on("click", "tr", function() {
     //console.log($(this).index());
     serverRequest([
         {name: 'func', value: 'getTriplesByNameAndDegree'},
@@ -407,6 +543,35 @@ $('#undo').click(function() {
 $('#redo').click(function() {
     redo();
 })
+
+$(".toggleButton").click(function() {
+    $(".toggleButton").removeClass("activeButton");
+    $(this).addClass("activeButton");
+    currentAction = $(this).attr("id");
+})
+
+
+$("#showNodeText input").change(function() {
+    if (this.checked) {
+        $("#nodeTextG").show();
+    }
+    else {
+        $("#nodeTextG").hide();
+    }
+});
+
+
+$("#showLinkText input").change(function() {
+    if (this.checked) {
+        $("#linkTextG").show();
+    }
+    else {
+        $("#linkTextG").hide();
+    }
+});
+
+
+
 
 
 serverRequest([{name: "func", value: "getNodes"}, {name: "offset", value: offset}, {name: "limit", value: limit}], updateList);

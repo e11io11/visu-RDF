@@ -18,7 +18,7 @@ app.get('/sparql', function (req, res) {
         sparql.getTriplesByNameAndDegree(res, req.query.name, req.query.minDegree, req.query.limit);
     }
 
-    else if (req.query.func === 'getAllTriples') {
+    else if (req.query.func === 'getAllTriplesWithLimit') {
         sparql.getAllTriples(res, req.query.limit);
     }
 
@@ -29,6 +29,15 @@ app.get('/sparql', function (req, res) {
     else if (req.query.func === 'getNodesWithFilter') {
         sparql.getNodesWithFilter(res, req.query.limit, req.query.offset, req.query.filter);
     }
+
+    else if (req.query.func === 'getInitTriples') {
+        sparql.getInitTriples(res, req.query.limit);
+    }
+
+    else if (req.query.func === 'getAllTriples') {
+        sparql.getAllTriples(res);
+    }
+
     else {
         console.log("function not found");
     }

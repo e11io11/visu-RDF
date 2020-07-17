@@ -9,18 +9,29 @@
 <body>
 	<svg id="graphContainer"></svg>
 
-	<div id="undoRedoButtons">
+	<div id="buttonRow">
 		<button id="undo">undo</button>
 		<button id="redo">redo</button>
+		<label>action :</label>
+		<button class="activeButton toggleButton" id="add">add</button>
+		<button class="toggleButton" id="remove">remove</button>
 	</div>
 
 	<div id="sidenav">
-		<div id="rangeDiv">
+		<div>
+			<div id="showNodeText">
+				<label>Show node text</label>
+				<input type="checkbox" checked>
+			</div>
+			<div id="showLinkText">
+				<label>Show link text</label>
+				<input type="checkbox" checked>
+			</div>
+			<br>
 			<div id="minDegree">
 				<label>Minimum degree : 0</label><br>
 				<input type="range" min="0" max="500" value="0" class="slider">
 			</div>
-			<br>
 			<div id="limit">
 				<label>Maximum number of added nodes : 100</label><br>
 				<input type="range" min="1" max="1000" value="100" class="slider">

@@ -71,8 +71,38 @@ exports.getTriplesWithObject = function(res, object, limit) {
 
 
 
-exports.getAllTriples = function(res, limit) {
+exports.getAllTriplesWithLimit = function(res, limit) {
 	var query = prefixes + `SELECT * WHERE { ?source ?label ?target } LIMIT ` + limit;
+
+	var data = {links: [], nodes: {}};
+ 
+ 	onData = function(row){
+		var current = {};
+    	Object.entries(row).forEach(([key, value]) => {
+			//console.log(`${key}: ${value.value} (${value.termType})`);
+			current[key] = value.value;
+			if (key === 'target' || key === 'source'){
+				data.nodes[value.value] = {label: value.value};
+			}
+			 
+		});
+		data.links.push(current);
+	}
+
+	onEnd = function() {
+		data.nodes = Object.values(data.nodes);
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, data, onData, onEnd);
+} 
+
+
+
+
+exports.getAllTriples = function(res) {
+	var query = prefixes + `SELECT * WHERE { ?source ?label ?target }`;
 
 	var data = {links: [], nodes: {}};
  
@@ -144,35 +174,6 @@ exports.getTriplesByName = function(res, name, limit) {
 
 	main(res, query, data, onData, onEnd);
 } 
-
-/*
-exports.getNodeDegree = function(res, name) {
-	var query = prefixes + `
-	SELECT (COUNT(*) as ?degree) 
-	{ 
-		{ `+ name +` ?p ?o } 
-		UNION
-		{ ?s ?p `+ name +` }
-	}`;
-
-	var degree;
- 
- 	onData = function(row){
-    	Object.entries(row).forEach(([key, value]) => {
-			degree = value.value;
-		});
-	}
-
-	onEnd = function() {
-		data.nodes = Object.values(data.nodes);
-		res.send(data);
-		console.log('All done');
-	}
-
-	main(res, query, degree, onData, onEnd);
-}
-*/
-
 
 
 
@@ -316,6 +317,77 @@ exports.getTriplesByNameAndDegree = function(res, name, minDegree, limit) {
 		}
 		else {
 			current.target = name;
+		}
+		data.links.push(current);
+	}
+
+	onEnd = function() {
+		data.nodes = Object.values(data.nodes);
+		res.send(data);
+		console.log('All done');
+	}
+
+	main(res, query, data, onData, onEnd);
+}
+
+
+
+
+
+exports.getInitTriples = function(res, limit) {
+	var query = prefixes + `
+	SELECT ?source ?label ?target ?x
+	{
+		{
+			{
+				  SELECT ?x(?p as ?label)(?o as ?target)
+				{
+					  { ?x ?p ?o }
+				}
+			}
+			UNION
+			 {
+				SELECT (?s as ?source)(?p as ?label)?x
+				{
+					  { ?s ?p ?x }
+				}
+			}
+		  }
+					{
+						SELECT ?x (COUNT(*) as ?degree) 
+						{ 
+							{ ?x ?p ?o } 
+							UNION
+							{ ?s ?p ?x }
+						}
+						GROUP BY ?x
+						ORDER BY desc(?degree)
+						LIMIT 1
+		
+					}
+	}
+	ORDER BY rand()
+	LIMIT ` + limit;
+
+	//console.log(query)
+
+	var data = {links: [], nodes: {}};
+ 
+	onData = function(row){
+		var current = {};
+	
+    	Object.entries(row).forEach(([key, value]) => {
+			current[key] = value.value;
+			if (key === 'source' || key === 'target' || key === 'x'){
+				data.nodes[value.value] = {label: value.value};
+			}
+			 
+		});
+		if (typeof current.source === 'undefined'){
+			current.source = current.x;
+		}
+		else {
+			current.target = current.x;
 		}
 		data.links.push(current);
 	}
