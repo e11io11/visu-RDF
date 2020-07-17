@@ -99,6 +99,13 @@ function serverRequest(parameters, callback) {
 
 }
 
+
+
+
+
+
+//======== GRAPH DATA ========
+
 var addToGraph = function(newData) {
     addToData(newData);
     backupData();
@@ -184,6 +191,15 @@ function addToData(newData){
 }
 
 
+var newGraph = function(newData) {
+    //console.log(newData);
+    data = newData;
+    backupData();
+    console.log(data)
+    reloadGraph();
+}
+
+
 var action = function(d) {
     if (currentAction === "add") {
         addSubsequent(d);
@@ -264,6 +280,19 @@ var removeNode = function(d) {
     backupData();
     reloadGraph();
 }
+
+
+
+function checkForPrefix(name) {
+    //console.log("name: "+name)
+    for (let i = 0; i < prefixes.length; i++) {
+        if (name.startsWith(prefixes[i].value)) {
+            //console.log("with prefix: "+prefixes[i].name + name.split(prefixes[i].value)[1])
+            return prefixes[i].name + name.split(prefixes[i].value)[1];
+        }
+    };
+    return name;
+}
  
 
 
@@ -330,22 +359,7 @@ function reloadGraph(){
 };
 
 
-function checkForPrefix(name) {
-    //console.log("name: "+name)
-    for (let i = 0; i < prefixes.length; i++) {
-        if (name.startsWith(prefixes[i].value)) {
-            //console.log("with prefix: "+prefixes[i].name + name.split(prefixes[i].value)[1])
-            return prefixes[i].name + name.split(prefixes[i].value)[1];
-        }
-    };
-    return name;
-}
 
-
-
-
-
-//======== GRAPH ELEMENT POSITION ========
 
 function ticked() {
     
@@ -425,27 +439,8 @@ function dragended(d) {
 
 
 
-//======== START GRAPH ========
-
-serverRequest([{name: 'func', value: 'getInitTriples'}, {name: 'limit', value: limit}], addToGraph)
-
-//serverRequest([{name: 'func', value: 'getAllTriples'}], addToGraph)
-
-
-
-
-
-
-
-
-
-
-
-
 
 //======== NAVIGATION ========
-
-
 
 var updateList = function(nodeList) {
     currentList = nodeList;
@@ -458,121 +453,134 @@ var updateList = function(nodeList) {
     });
 }
 
-var newGraph = function(newData) {
-    //console.log(newData);
-    data = newData;
-    backupData();
-    console.log(data)
-    reloadGraph();
-}
 
-$("#nodeList").on("click", "tr", function() {
-    //console.log($(this).index());
-    serverRequest([
-        {name: 'func', value: 'getTriplesByNameAndDegree'},
-        {name: 'name', value: currentList[$(this).index()-1].node}, 
-        {name: 'minDegree', value: minDegree}, 
-        {name: 'limit', value: limit}],
-        newGraph);
-});
+
+$(document).ready(function(){
 
 
 
-$("#previous").click(function() {
-    if (offset >= 0) {
-        offset -= 100;
-    }
-    serverRequest([
-        {name: "func", value: "getNodesWithFilter"}, 
-        {name: "offset", value: offset}, 
-        {name: "limit", value: limit},
-        {name: "filter", value: currentSearch}], 
-        updateList);
-});
+    $("#nodeList").on("click", "tr", function() {
+        //console.log($(this).index());
+        serverRequest([
+            {name: 'func', value: 'getTriplesByNameAndDegree'},
+            {name: 'name', value: currentList[$(this).index()-1].node}, 
+            {name: 'minDegree', value: minDegree}, 
+            {name: 'limit', value: limit}],
+            newGraph);
+    });
 
 
-$("#next").click(function() {
-    offset += 100;
 
-    serverRequest([
-        {name: "func", value: "getNodesWithFilter"}, 
-        {name: "offset", value: offset}, 
-        {name: "limit", value: limit},
-        {name: "filter", value: currentSearch}], 
-        updateList);
-});
-
-
-$("#search").click(function() {
-    var filter = $("#searchInput").val();
-    //console.log("attempting to search : "+filter)
-    //There is probably a better way to sanitize input.
-    //I am not sure if this is sufficient
-    if (filter.includes('"')) {
-        alert("bad input");
-    }
-    else {
-        offset = 0;
-        currentSearch = filter;
+    $("#previous").click(function() {
+        if (offset >= 0) {
+            offset -= 100;
+        }
         serverRequest([
             {name: "func", value: "getNodesWithFilter"}, 
             {name: "offset", value: offset}, 
             {name: "limit", value: limit},
             {name: "filter", value: currentSearch}], 
             updateList);
+    });
 
-    }
+
+    $("#next").click(function() {
+        offset += 100;
+
+        serverRequest([
+            {name: "func", value: "getNodesWithFilter"}, 
+            {name: "offset", value: offset}, 
+            {name: "limit", value: limit},
+            {name: "filter", value: currentSearch}], 
+            updateList);
+    });
+
+
+    $("#search").click(function() {
+        var filter = $("#searchInput").val();
+        //console.log("attempting to search : "+filter)
+        //There is probably a better way to sanitize input.
+        //I am not sure if this is sufficient
+        if (filter.includes('"')) {
+            alert("bad input");
+        }
+        else {
+            offset = 0;
+            currentSearch = filter;
+            serverRequest([
+                {name: "func", value: "getNodesWithFilter"}, 
+                {name: "offset", value: offset}, 
+                {name: "limit", value: limit},
+                {name: "filter", value: currentSearch}], 
+                updateList);
+
+        }
+    });
+
+
+    $("#minDegree").children('input[type=range]').change(function() {
+        //console.log("change")
+        $("#minDegree").children("label").text("Minimum degree : "+$(this).val())
+        minDegree = $(this).val();
+    });
+
+    $("#limit").children('input[type=range]').change(function() {
+        $("#limit").children("label").text("Maximum number of added nodes : "+$(this).val())
+        limit = $(this).val();
+    });
+
+    $('#undo').click(function() {
+        undo();
+    });
+
+    $('#redo').click(function() {
+        redo();
+    })
+
+    $(".toggleButton").click(function() {
+        $(".toggleButton").removeClass("activeButton");
+        $(this).addClass("activeButton");
+        currentAction = $(this).attr("id");
+    })
+
+
+    $("#showNodeText input").change(function() {
+        if (this.checked) {
+            $("#nodeTextG").show();
+        }
+        else {
+            $("#nodeTextG").hide();
+        }
+    });
+
+
+    $("#showLinkText input").change(function() {
+        if (this.checked) {
+            $("#linkTextG").show();
+        }
+        else {
+            $("#linkTextG").hide();
+        }
+    });
+
 });
 
 
-$("#minDegree").children('input[type=range]').change(function() {
-    //console.log("change")
-    $("#minDegree").children("label").text("Minimum degree : "+$(this).val())
-    minDegree = $(this).val();
-});
-
-$("#limit").children('input[type=range]').change(function() {
-    $("#limit").children("label").text("Maximum number of added nodes : "+$(this).val())
-    limit = $(this).val();
-});
-
-$('#undo').click(function() {
-    undo();
-});
-
-$('#redo').click(function() {
-    redo();
-})
-
-$(".toggleButton").click(function() {
-    $(".toggleButton").removeClass("activeButton");
-    $(this).addClass("activeButton");
-    currentAction = $(this).attr("id");
-})
-
-
-$("#showNodeText input").change(function() {
-    if (this.checked) {
-        $("#nodeTextG").show();
-    }
-    else {
-        $("#nodeTextG").hide();
-    }
-});
-
-
-$("#showLinkText input").change(function() {
-    if (this.checked) {
-        $("#linkTextG").show();
-    }
-    else {
-        $("#linkTextG").hide();
-    }
-});
 
 
 
 
+//======== START GRAPH ========
+
+serverRequest([{name: 'func', value: 'getInitTriples'}, {name: 'limit', value: limit}], addToGraph)
+
+//serverRequest([{name: 'func', value: 'getAllTriples'}], addToGraph)
+
+
+//======== START NODE LIST ========
 
 serverRequest([{name: "func", value: "getNodes"}, {name: "offset", value: offset}, {name: "limit", value: limit}], updateList);
+
+
+
 
